@@ -1,7 +1,7 @@
 import '../models/daily_tithi.dart';
 
 class TithiService {
-  static Future<Map<DateTime, DailyTithi>> fetchTithiForMonth(DateTime month) async {
+  static Future<Map<DateTime, DailyTithi>> fetchTithiForMonth(DateTime month, {String? country, String? state}) async {
     final data = <DateTime, DailyTithi>{};
     final first = DateTime(month.year, month.month, 1);
     final last = DateTime(month.year, month.month + 1, 0);

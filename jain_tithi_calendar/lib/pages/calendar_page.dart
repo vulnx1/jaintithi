@@ -4,7 +4,7 @@ import '../models/daily_tithi.dart';
 import '../services/tithi_service.dart';
 import '../widgets/tithi_day_tile.dart';
 import 'day_detail_page.dart';
-import '../widgets/location_selector.dart'; // NEW IMPORT
+import '../widgets/location_selector.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -18,28 +18,26 @@ class _CalendarPageState extends State<CalendarPage> {
   DateTime? _selectedDay;
   final Map<DateTime, DailyTithi> _tithiData = {};
 
-  String? _selectedCountry;
-  String? _selectedState;
+  double? _latitude;
+  double? _longitude;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadTithiData(_focusedDay);
-  }
+  DateTime _normalize(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
   void _loadTithiData(DateTime month) async {
-    // You can use _selectedCountry and _selectedState to customize the request
-    final data = await TithiService.fetchTithiForMonth(month);
-    setState(() => _tithiData.addAll(data));
+    if (_latitude == null || _longitude == null) return;
+    final data = await TithiService.fetchTithiForMonth(month, latitude: _latitude!, longitude: _longitude!);
+    setState(() {
+      _tithiData.clear();
+      data.forEach((key, value) => _tithiData[_normalize(key)] = value);
+    });
   }
 
-  void _onLocationSelected(String country, String state) {
+  void _onLocationSelected(String country, String state, double lat, double lon) {
     setState(() {
-      _selectedCountry = country;
-      _selectedState = state;
+      _latitude = lat;
+      _longitude = lon;
     });
-    print("Selected Location: $state, $country");
-    _loadTithiData(_focusedDay); // Optionally reload data
+    _loadTithiData(_focusedDay);
   }
 
   @override
@@ -70,7 +68,7 @@ class _CalendarPageState extends State<CalendarPage> {
                   MaterialPageRoute(
                     builder: (_) => DayDetailPage(
                       date: selectedDay,
-                      tithi: _tithiData[selectedDay],
+                      tithi: _tithiData[_normalize(selectedDay)],
                     ),
                   ),
                 );
@@ -78,7 +76,7 @@ class _CalendarPageState extends State<CalendarPage> {
               calendarBuilders: CalendarBuilders(
                 defaultBuilder: (context, day, _) => TithiDayTile(
                   date: day,
-                  tithi: _tithiData[day],
+                  tithi: _tithiData[_normalize(day)],
                 ),
               ),
             ),
