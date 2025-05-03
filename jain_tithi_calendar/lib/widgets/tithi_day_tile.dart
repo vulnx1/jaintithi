@@ -5,25 +5,29 @@ class TithiDayTile extends StatelessWidget {
   final DateTime date;
   final DailyTithi? tithi;
 
-  const TithiDayTile({super.key, required this.date, this.tithi});
+  const TithiDayTile({
+    super.key,
+    required this.date,
+    required this.tithi,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text("${date.day}"),
-          if (tithi != null)
-            Text(
-              tithi!.tithiName,
-              style: TextStyle(
-                fontSize: 10,
-                color: tithi!.isShubhDin ? Colors.green : Colors.black,
-              ),
-              textAlign: TextAlign.center,
-            ),
-        ],
+    return Container(
+      margin: const EdgeInsets.all(4.0),
+      decoration: BoxDecoration(
+        color: tithi?.shubhDin ?? false ? Colors.green.shade100 : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Text(
+          tithi?.tithiName ?? '',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: tithi?.shubhDin ?? false ? Colors.green : Colors.black,
+          ),
+        ),
       ),
     );
   }

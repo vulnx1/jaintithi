@@ -1,18 +1,13 @@
 class RitualTimings {
-  final DateTime sunrise ;
-  final DateTime sunset ;
-  final DateTime Prahar ;
-  final DateTime navkarshi;
-  final DateTime porsi;
-  final DateTime sadhPorsi;
-  final DateTime purimaddha;
-  final DateTime avaddha;
-  final DateTime tithi;
-  final DateTime shubdin;
-
-  
+  final String prahar;
+  final String navkarshi;
+  final String porsi;
+  final String sadhPorsi;
+  final String purimaddha;
+  final String avaddha;
 
   RitualTimings({
+    required this.prahar,
     required this.navkarshi,
     required this.porsi,
     required this.sadhPorsi,
