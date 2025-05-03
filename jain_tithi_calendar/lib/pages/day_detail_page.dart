@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/daily_tithi.dart';
+// ignore: depend_on_referenced_packages
+import 'package:intl/intl.dart';
 
 class DayDetailPage extends StatelessWidget {
   final DateTime date;
@@ -27,7 +29,7 @@ class DayDetailPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Tithi: ${tithi!.tithiName}", style: Theme.of(context).textTheme.headline6),
+          Text("Tithi: ${tithi!.tithiName}", style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),
             Text("Shubh Din: ${tithi!.shubhDin ? 'Yes' : 'No'}"),
             const SizedBox(height: 8),

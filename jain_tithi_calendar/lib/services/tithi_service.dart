@@ -1,44 +1,60 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'daily_tithi.dart';
+import '../models/daily_tithi.dart';
 
 class TithiService {
   static const String _apiUrl = 'https://api.sunrise-sunset.org/json';
 
-  // Fetch the sunrise and sunset times from the API
   static Future<Map<DateTime, DailyTithi>> fetchTithiForMonth(
     DateTime month, {
     required double latitude,
     required double longitude,
   }) async {
-    final mockData = <DateTime, DailyTithi>{};
-    for (int i = 1; i <= DateTime(month.year, month.month + 1, 0).day; i++) {
-      final date = DateTime(month.year, month.month, i);
-      
-      // Fetch sunrise and sunset data from the API
-      final response = await _fetchSunriseSunsetData(latitude, longitude);
-      final sunrise = response['results']['sunrise'];
-      final sunset = response['results']['sunset'];
+    final Map<DateTime, DailyTithi> data = {};
 
-      mockData[date] = DailyTithi(
+    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+
+    for (int i = 1; i <= daysInMonth; i++) {
+      final date = DateTime(month.year, month.month, i);
+      final apiResponse = await _fetchSunriseSunsetData(latitude, longitude, date);
+
+      final sunriseUTC = DateTime.parse(apiResponse['results']['sunrise']);
+      final sunsetUTC = DateTime.parse(apiResponse['results']['sunset']);
+
+      final sunriseLocal = sunriseUTC.toLocal().toIso8601String();
+      final sunsetLocal = sunsetUTC.toLocal().toIso8601String();
+
+      data[date] = DailyTithi(
         date: date,
-        tithiName: "Tithi ${i}", // You can implement actual Tithi calculation here
-        shubhDin: i % 5 == 0, // Just mock data for Shubh Din
-        sunrise: sunrise,
-        sunset: sunset,
+        sunrise: sunriseLocal,
+        sunset: sunsetLocal,
+        tithiName: "Tithi $i", // Replace with actual Tithi logic
+        shubhDin: i % 5 == 0,
       );
     }
-    return mockData;
+
+    return data;
   }
 
-  // Fetch data from the Sunrise-Sunset API
-  static Future<Map<String, dynamic>> _fetchSunriseSunsetData(double latitude, double longitude) async {
-    final response = await http.get(Uri.parse('$_apiUrl?lat=$latitude&lng=$longitude&formatted=0'));
-    
+  static Future<Map<String, dynamic>> _fetchSunriseSunsetData(
+    double latitude,
+    double longitude,
+    DateTime date,
+  ) async {
+    final formattedDate = "${date.year}-${_pad(date.month)}-${_pad(date.day)}";
+
+    final url = Uri.parse(
+      '$_apiUrl?lat=$latitude&lng=$longitude&date=$formattedDate&formatted=0',
+    );
+
+    final response = await http.get(url);
+
     if (response.statusCode == 200) {
       return json.decode(response.body);
     } else {
-      throw Exception('Failed to load sunrise and sunset data');
+      throw Exception('Failed to fetch sunrise/sunset for $formattedDate');
     }
   }
+
+  static String _pad(int number) => number.toString().padLeft(2, '0');
 }
