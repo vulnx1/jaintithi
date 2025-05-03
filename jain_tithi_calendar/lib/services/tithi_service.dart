@@ -12,27 +12,29 @@ class TithiService {
     required double latitude,
     required double longitude,
   }) async {
-    final Map<DateTime, DailyTithi> data = {};
+    final Map<DateTime, DailyTithi> tithiMap = {};
     final formattedMonth = "${month.year}-${_pad(month.month)}";
 
     try {
-      final response = await http.get(Uri.parse(
-        '$_apiUrl?latitude=$latitude&longitude=$longitude&month=$formattedMonth&language=en'
-      ));
+      final uri = Uri.parse(
+        '$_apiUrl?latitude=$latitude&longitude=$longitude&month=$formattedMonth&language=en',
+      );
+      final response = await http.get(uri);
 
       if (response.statusCode != 200) {
         throw Exception('API Error: ${response.statusCode}');
       }
 
-      final panchangData = json.decode(response.body);
-      
-      for (final dayData in panchangData['panchang']) {
-        final date = DateTime.parse(dayData['date']);
-        final sunrise = DateTime.parse(dayData['sunrise']).toLocal();
-        final sunset = DateTime.parse(dayData['sunset']).toLocal();
-        final tithi = dayData['tithi']['name'];
-        
-        data[date] = DailyTithi(
+      final decoded = json.decode(response.body);
+      final List<dynamic> days = decoded['panchang'];
+
+      for (final day in days) {
+        final date = DateTime.parse(day['date']);
+        final sunrise = DateTime.parse(day['sunrise']).toLocal();
+        final sunset = DateTime.parse(day['sunset']).toLocal();
+        final tithi = day['tithi']['name'] ?? 'Unknown';
+
+        tithiMap[date] = DailyTithi(
           date: date,
           sunrise: _formatTime(sunrise),
           sunset: _formatTime(sunset),
@@ -41,23 +43,25 @@ class TithiService {
         );
       }
 
-      return data;
+      return tithiMap;
     } catch (e) {
       throw Exception('Failed to fetch Tithi data: $e');
     }
   }
 
+  /// Determines if a day is considered a "Shubh Din" (auspicious day)
   static bool _isShubhDin(DateTime date, String tithi) {
-    // Actual Shubh Din logic based on Jain traditions
     final weekday = date.weekday;
-    return tithi.contains('Pratipada') || 
-           tithi.contains('Panchami') || 
+    return tithi.contains('Pratipada') ||
+           tithi.contains('Panchami') ||
            (weekday == DateTime.friday && tithi.contains('Chaturthi'));
   }
 
+  /// Formats time as HH:mm
   static String _formatTime(DateTime time) {
     return "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
   }
 
+  /// Pads a number with a leading zero if needed (e.g., 2 -> 02)
   static String _pad(int number) => number.toString().padLeft(2, '0');
 }

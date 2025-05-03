@@ -16,6 +16,8 @@ class _LocationSelectorState extends State<LocationSelector> {
   String? _state;
   double? _latitude;
   double? _longitude;
+  bool _isFetching = false;
+  String? _error;
 
   @override
   void initState() {
@@ -24,39 +26,76 @@ class _LocationSelectorState extends State<LocationSelector> {
   }
 
   Future<void> _fetchLocation() async {
-    if (!await Geolocator.isLocationServiceEnabled()) return;
+    setState(() {
+      _isFetching = true;
+      _error = null;
+    });
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
-      permission = await Geolocator.requestPermission();
-    }
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _error = 'Location services are disabled.');
+        return;
+      }
 
-    if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-      Position position = await Geolocator.getCurrentPosition();
-      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission != LocationPermission.whileInUse && permission != LocationPermission.always) {
+        setState(() => _error = 'Location permission not granted.');
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      final placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+
       if (placemarks.isNotEmpty) {
+        final placemark = placemarks[0];
         setState(() {
-          _country = placemarks[0].country;
-          _state = placemarks[0].administrativeArea;
+          _country = placemark.country;
+          _state = placemark.administrativeArea;
           _latitude = position.latitude;
           _longitude = position.longitude;
         });
         widget.onLocationSelected(_country!, _state!, _latitude!, _longitude!);
       }
+    } catch (e) {
+      setState(() => _error = 'Failed to get location: $e');
+    } finally {
+      setState(() => _isFetching = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("Location: ${_state ?? '...'}, ${_country ?? '...'}"),
-        TextButton(
-          onPressed: _fetchLocation,
-          child: const Text("Refresh Location"),
-        )
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Location: ${_state ?? 'Detecting...'}, ${_country ?? ''}',
+            style: const TextStyle(fontSize: 16),
+          ),
+          if (_isFetching)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: LinearProgressIndicator(),
+            ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+            ),
+          TextButton.icon(
+            onPressed: _fetchLocation,
+            icon: const Icon(Icons.my_location),
+            label: const Text('Refresh Location'),
+          ),
+        ],
+      ),
     );
   }
 }
