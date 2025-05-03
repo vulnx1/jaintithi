@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../services/sunrise_sunset_service.dart';
 
+// ignore: use_key_in_widget_constructors
 class HomeScreen extends StatefulWidget {
   @override
+  // ignore: library_private_types_in_public_api
   _HomeScreenState createState() => _HomeScreenState();
 }
 

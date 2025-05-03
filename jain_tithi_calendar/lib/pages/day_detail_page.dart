@@ -62,7 +62,7 @@ class DayDetailPage extends StatelessWidget {
   String _calculatePrahar(String sunrise, String sunset) {
     final sunriseHour = int.parse(sunrise.split(':')[0]);
     final sunsetHour = int.parse(sunset.split(':')[0]);
-    final praharDuration = (sunsetHour - sunriseHour) / 8;
+    final praharDuration = (sunsetHour - sunriseHour) / 4;
     final praharTime = sunriseHour + praharDuration;
     return "$praharTime:00 AM";
   }

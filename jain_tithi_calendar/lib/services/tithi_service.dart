@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/daily_tithi.dart';
+// ignore: unused_import
+import '../utils/tithi_calculator.dart';
 
 class TithiService {
-  static const String _apiUrl = 'https://api.sunrise-sunset.org/json';
+  static const String _apiUrl = 'https://api.drikpanchang.com/v1/panchang';
 
   static Future<Map<DateTime, DailyTithi>> fetchTithiForMonth(
     DateTime month, {
@@ -11,49 +13,50 @@ class TithiService {
     required double longitude,
   }) async {
     final Map<DateTime, DailyTithi> data = {};
+    final formattedMonth = "${month.year}-${_pad(month.month)}";
 
-    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+    try {
+      final response = await http.get(Uri.parse(
+        '$_apiUrl?latitude=$latitude&longitude=$longitude&month=$formattedMonth&language=en'
+      ));
 
-    for (int i = 1; i <= daysInMonth; i++) {
-      final date = DateTime(month.year, month.month, i);
-      final apiResponse = await _fetchSunriseSunsetData(latitude, longitude, date);
+      if (response.statusCode != 200) {
+        throw Exception('API Error: ${response.statusCode}');
+      }
 
-      final sunriseUTC = DateTime.parse(apiResponse['results']['sunrise']);
-      final sunsetUTC = DateTime.parse(apiResponse['results']['sunset']);
+      final panchangData = json.decode(response.body);
+      
+      for (final dayData in panchangData['panchang']) {
+        final date = DateTime.parse(dayData['date']);
+        final sunrise = DateTime.parse(dayData['sunrise']).toLocal();
+        final sunset = DateTime.parse(dayData['sunset']).toLocal();
+        final tithi = dayData['tithi']['name'];
+        
+        data[date] = DailyTithi(
+          date: date,
+          sunrise: _formatTime(sunrise),
+          sunset: _formatTime(sunset),
+          tithiName: tithi,
+          shubhDin: _isShubhDin(date, tithi),
+        );
+      }
 
-      final sunriseLocal = sunriseUTC.toLocal().toIso8601String();
-      final sunsetLocal = sunsetUTC.toLocal().toIso8601String();
-
-      data[date] = DailyTithi(
-        date: date,
-        sunrise: sunriseLocal,
-        sunset: sunsetLocal,
-        tithiName: "Tithi $i", // Replace with actual Tithi logic
-        shubhDin: i % 5 == 0,
-      );
+      return data;
+    } catch (e) {
+      throw Exception('Failed to fetch Tithi data: $e');
     }
-
-    return data;
   }
 
-  static Future<Map<String, dynamic>> _fetchSunriseSunsetData(
-    double latitude,
-    double longitude,
-    DateTime date,
-  ) async {
-    final formattedDate = "${date.year}-${_pad(date.month)}-${_pad(date.day)}";
+  static bool _isShubhDin(DateTime date, String tithi) {
+    // Actual Shubh Din logic based on Jain traditions
+    final weekday = date.weekday;
+    return tithi.contains('Pratipada') || 
+           tithi.contains('Panchami') || 
+           (weekday == DateTime.friday && tithi.contains('Chaturthi'));
+  }
 
-    final url = Uri.parse(
-      '$_apiUrl?lat=$latitude&lng=$longitude&date=$formattedDate&formatted=0',
-    );
-
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('Failed to fetch sunrise/sunset for $formattedDate');
-    }
+  static String _formatTime(DateTime time) {
+    return "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
   }
 
   static String _pad(int number) => number.toString().padLeft(2, '0');

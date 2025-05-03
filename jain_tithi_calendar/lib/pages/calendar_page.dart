@@ -3,7 +3,6 @@ import 'package:table_calendar/table_calendar.dart';
 import '../models/daily_tithi.dart';
 import '../services/tithi_service.dart';
 import '../widgets/tithi_day_tile.dart';
-import 'day_detail_page.dart';
 import '../widgets/location_selector.dart';
 
 class CalendarPage extends StatefulWidget {
@@ -15,29 +14,37 @@ class CalendarPage extends StatefulWidget {
 
 class _CalendarPageState extends State<CalendarPage> {
   DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
   final Map<DateTime, DailyTithi> _tithiData = {};
+  double? _latitude, _longitude;
+  bool _isLoading = false;
+  String? _error;
 
-  double? _latitude;
-  double? _longitude;
-
-  DateTime _normalize(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+  DateTime _normalize(DateTime dt) => DateTime.utc(dt.year, dt.month, dt.day);
 
   void _loadTithiData(DateTime month) async {
     if (_latitude == null || _longitude == null) return;
-    final data = await TithiService.fetchTithiForMonth(month, latitude: _latitude!, longitude: _longitude!);
+    
     setState(() {
-      _tithiData.clear();
-      data.forEach((key, value) => _tithiData[_normalize(key)] = value);
+      _isLoading = true;
+      _error = null;
     });
-  }
-
-  void _onLocationSelected(String country, String state, double lat, double lon) {
-    setState(() {
-      _latitude = lat;
-      _longitude = lon;
-    });
-    _loadTithiData(_focusedDay);
+    
+    try {
+      final data = await TithiService.fetchTithiForMonth(
+        DateTime(month.year, month.month),
+        latitude: _latitude!,
+        longitude: _longitude!
+      );
+      
+      setState(() {
+        _tithiData.clear();
+        data.forEach((key, value) => _tithiData[_normalize(key)] = value);
+      });
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -46,33 +53,34 @@ class _CalendarPageState extends State<CalendarPage> {
       appBar: AppBar(title: const Text('Jain Tithi Calendar')),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: LocationSelector(
-              onLocationSelected: _onLocationSelected,
-            ),
+          LocationSelector(
+            onLocationSelected: (country, state, lat, lon) {
+              setState(() {
+                _latitude = lat;
+                _longitude = lon;
+              });
+              _loadTithiData(_focusedDay);
+            },
           ),
+          if (_isLoading) const LinearProgressIndicator(),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                'Error: $_error',
+                style: const TextStyle(color: Colors.red),
+              ),
+            ),
           Expanded(
             child: TableCalendar(
-              firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
+              firstDay: DateTime.utc(2020),
+              lastDay: DateTime.utc(2030),
               focusedDay: _focusedDay,
-              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              onDaySelected: (selectedDay, focusedDay) {
-                setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                });
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => DayDetailPage(
-                      date: selectedDay,
-                      tithi: _tithiData[_normalize(selectedDay)],
-                    ),
-                  ),
-                );
+              onPageChanged: (focusedDay) {
+                setState(() => _focusedDay = focusedDay);
+                _loadTithiData(focusedDay);
               },
+              selectedDayPredicate: (day) => false,
               calendarBuilders: CalendarBuilders(
                 defaultBuilder: (context, day, _) => TithiDayTile(
                   date: day,
