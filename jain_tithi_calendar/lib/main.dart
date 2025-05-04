@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'pages/calendar_page.dart';
+import 'themes/app_theme.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const JainTithiApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class JainTithiApp extends StatelessWidget {
+  const JainTithiApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Jain Tithi Calendar',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
-      home: const CalendarPage(),
+    return ScreenUtilInit(
+      designSize: const Size(360, 690), // Base design size
+      builder: (context, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'Jain Tithi Calendar',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          home: const CalendarPage(),
+        );
+      },
     );
   }
 }

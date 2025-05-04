@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../models/daily_tithi.dart';
-import '../services/tithi_service.dart';
-import '../widgets/tithi_day_tile.dart';
-import '../widgets/location_selector.dart';
+import 'package:intl/intl.dart';
+import '../utils/responsive.dart';
 
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
@@ -14,128 +12,60 @@ class CalendarPage extends StatefulWidget {
 
 class _CalendarPageState extends State<CalendarPage> {
   DateTime _focusedDay = DateTime.now();
-  final Map<DateTime, DailyTithi> _tithiData = {};
-  double? _latitude, _longitude;
-  bool _isLoading = false;
-  String? _error;
-
-  DateTime _normalize(DateTime dt) => DateTime.utc(dt.year, dt.month, dt.day);
-
-  void _loadTithiData(DateTime month) async {
-    if (_latitude == null || _longitude == null) return;
-    
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    
-    try {
-      final data = await TithiService.fetchTithiForMonth(
-        DateTime(month.year, month.month),
-        latitude: _latitude!,
-        longitude: _longitude!
-      );
-      
-      setState(() {
-        _tithiData.clear();
-        data.forEach((key, value) => _tithiData[_normalize(key)] = value);
-      });
-    } catch (e) {
-      setState(() => _error = e.toString());
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
+  DateTime? _selectedDay;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Jain Tithi Calendar'),
-        backgroundColor: Colors.green,
+        centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(Responsive.value(context, 8, 16)),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Location Selector
-            LocationSelector(
-              onLocationSelected: (country, state, lat, lon) {
+            TableCalendar(
+              firstDay: DateTime.utc(2020, 1, 1),
+              lastDay: DateTime.utc(2050, 12, 31),
+              focusedDay: _focusedDay,
+              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+              calendarFormat: CalendarFormat.month,
+              onDaySelected: (selected, focused) {
                 setState(() {
-                  _latitude = lat;
-                  _longitude = lon;
+                  _selectedDay = selected;
+                  _focusedDay = focused;
                 });
-                _loadTithiData(_focusedDay);
               },
-            ),
-            const SizedBox(height: 16),
-
-            // Loading Indicator
-            if (_isLoading) const LinearProgressIndicator(),
-
-            // Error Display
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  'Error: $_error',
-                  style: const TextStyle(color: Colors.red),
+              calendarStyle: CalendarStyle(
+                todayDecoration: BoxDecoration(
+                  color: Colors.teal.shade200,
+                  shape: BoxShape.circle,
+                ),
+                selectedDecoration: const BoxDecoration(
+                  color: Colors.teal,
+                  shape: BoxShape.circle,
+                ),
+                weekendTextStyle: const TextStyle(color: Colors.redAccent),
+              ),
+              headerStyle: HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+                titleTextStyle: TextStyle(
+                  fontSize: Responsive.value(context, 16, 20),
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-
-            // Calendar
-            Expanded(
-              child: Column(
-                children: [
-                  // Calendar Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () {
-                          setState(() {
-                            _focusedDay = DateTime(_focusedDay.year, _focusedDay.month - 1, _focusedDay.day);
-                            _loadTithiData(_focusedDay);
-                          });
-                        },
-                      ),
-                      Text(
-                        '${_focusedDay.month} - ${_focusedDay.year}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward),
-                        onPressed: () {
-                          setState(() {
-                            _focusedDay = DateTime(_focusedDay.year, _focusedDay.month + 1, _focusedDay.day);
-                            _loadTithiData(_focusedDay);
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                  // Table Calendar
-                  TableCalendar(
-                    firstDay: DateTime.utc(2020),
-                    lastDay: DateTime.utc(2030),
-                    focusedDay: _focusedDay,
-                    onPageChanged: (focusedDay) {
-                      setState(() => _focusedDay = focusedDay);
-                      _loadTithiData(focusedDay);
-                    },
-                    selectedDayPredicate: (day) => false,
-                    calendarBuilders: CalendarBuilders(
-                      defaultBuilder: (context, day, _) => TithiDayTile(
-                        date: day,
-                        tithi: _tithiData[_normalize(day)],
-                      ),
-                    ),
-                  ),
-                ],
+              daysOfWeekStyle: const DaysOfWeekStyle(
+                weekendStyle: TextStyle(color: Colors.red),
               ),
             ),
+            const SizedBox(height: 20),
+            if (_selectedDay != null)
+              Text(
+                'Selected Date: ${DateFormat.yMMMMd().format(_selectedDay!)}',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
           ],
         ),
       ),

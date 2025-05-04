@@ -1,99 +1,51 @@
 import 'package:flutter/material.dart';
 import '../models/daily_tithi.dart';
-// ignore: depend_on_referenced_packages
-import 'package:intl/intl.dart';
+import '../utils/ritual_timings.dart';
 
 class DayDetailPage extends StatelessWidget {
   final DateTime date;
-  final DailyTithi? tithi;
+  final DailyTithi tithi;
 
-  const DayDetailPage({
-    super.key,
-    required this.date,
-    required this.tithi,
-  });
+  const DayDetailPage({super.key, required this.date, required this.tithi});
 
   @override
   Widget build(BuildContext context) {
-    if (tithi == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text("Day Details")),
-        body: const Center(child: Text("No Tithi data available for this day.")),
-      );
-    }
+    // Convert HH:mm strings to DateTime (same day)
+    final sunriseTime = _parseTime(tithi.sunrise, tithi.date);
+    final sunsetTime = _parseTime(tithi.sunset, tithi.date);
+
+    final rituals = calculateRitualTimings(sunriseTime, sunsetTime);
 
     return Scaffold(
-      appBar: AppBar(title: Text(DateFormat('yyyy-MM-dd').format(date))),
+      appBar: AppBar(
+        title: Text("Details for ${_formatDate(tithi.date)}"),
+        backgroundColor: Colors.green,
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(16),
+        child: ListView(
           children: [
-          Text("Tithi: ${tithi!.tithiName}", style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text("Shubh Din: ${tithi!.shubhDin ? 'Yes' : 'No'}"),
-            const SizedBox(height: 8),
-            Text("Sunrise: ${tithi!.sunrise}"),
-            const SizedBox(height: 8),
-            Text("Sunset: ${tithi!.sunset}"),
-            const SizedBox(height: 16),
-            Divider(),
-            const SizedBox(height: 16),
-            Text("Rituals:"),
-            _buildRitualRow("Prahar", _calculatePrahar(tithi!.sunrise, tithi!.sunset)),
-            _buildRitualRow("Navkarshi", _calculateNavkarshi(tithi!.sunrise)),
-            _buildRitualRow("Porsi", _calculatePorsi(tithi!.sunrise)),
-            _buildRitualRow("Sadh Porsi", _calculateSadhPorsi(tithi!.sunrise)),
-            _buildRitualRow("Purimaddha", _calculatePurimaddha(tithi!.sunrise)),
-            _buildRitualRow("Avaddha", _calculateAvaddha(tithi!.sunrise)),
+            Text("📅 Tithi: ${tithi.tithiName}", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text("☀️ Sunrise: ${tithi.sunrise}"),
+            Text("🌇 Sunset: ${tithi.sunset}"),
+            const Divider(height: 24),
+            Text("🕉️ Ritual Timings", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ...rituals.entries.map((entry) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text("${entry.key}: ${entry.value}", style: TextStyle(fontSize: 14)),
+            )),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildRitualRow(String name, String time) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Text("$name: $time"),
-    );
+  DateTime _parseTime(String time, DateTime date) {
+    final parts = time.split(':');
+    return DateTime(date.year, date.month, date.day, int.parse(parts[0]), int.parse(parts[1]));
   }
 
-  String _calculatePrahar(String sunrise, String sunset) {
-    final sunriseHour = int.parse(sunrise.split(':')[0]);
-    final sunsetHour = int.parse(sunset.split(':')[0]);
-    final praharDuration = (sunsetHour - sunriseHour) / 4;
-    final praharTime = sunriseHour + praharDuration;
-    return "$praharTime:00 AM";
-  }
-
-  String _calculateNavkarshi(String sunrise) {
-    final sunriseHour = int.parse(sunrise.split(':')[0]);
-    final navkarshiTime = sunriseHour + 1;
-    return "$navkarshiTime:48 AM";
-  }
-
-  String _calculatePorsi(String sunrise) {
-    final sunriseHour = int.parse(sunrise.split(':')[0]);
-    final porsiTime = sunriseHour + 3;
-    return "$porsiTime:00 AM";
-  }
-
-  String _calculateSadhPorsi(String sunrise) {
-    final sunriseHour = int.parse(sunrise.split(':')[0]);
-    final sadhPorsiTime = sunriseHour + 3.5;
-    return "$sadhPorsiTime:00 AM";
-  }
-
-  String _calculatePurimaddha(String sunrise) {
-    final sunriseHour = int.parse(sunrise.split(':')[0]);
-    final purimaddhaTime = sunriseHour + 6;
-    return "$purimaddhaTime:00 AM";
-  }
-
-  String _calculateAvaddha(String sunrise) {
-    final sunriseHour = int.parse(sunrise.split(':')[0]);
-    final avaddhaTime = sunriseHour + 9;
-    return "$avaddhaTime:00 AM";
+  String _formatDate(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 }
