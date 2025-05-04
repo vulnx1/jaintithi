@@ -1,49 +1,32 @@
-/// A model representing Tithi (lunar day) information for a specific date.
 class DailyTithi {
-  /// The date of the Tithi.
   final DateTime date;
-
-  /// The name of the Tithi (e.g., "Pratipada", "Panchami").
   final String tithiName;
+  final DateTime sunrise;
+  final DateTime sunset;
 
-  /// Whether this day is considered a "Shubh Din" (auspicious day).
-  final bool shubhDin;
-
-  /// Sunrise time formatted as HH:mm.
-  final String sunrise;
-
-  /// Sunset time formatted as HH:mm.
-  final String sunset;
-
-  const DailyTithi({
+  DailyTithi({
     required this.date,
     required this.tithiName,
-    required this.shubhDin,
     required this.sunrise,
     required this.sunset,
   });
 
-  @override
-  String toString() {
-    return 'DailyTithi(date: $date, tithiName: $tithiName, shubhDin: $shubhDin, sunrise: $sunrise, sunset: $sunset)';
+  // Optional: factory method if parsing from API/JSON
+  factory DailyTithi.fromJson(Map<String, dynamic> json) {
+    return DailyTithi(
+      date: DateTime.parse(json['date']),
+      tithiName: json['tithiName'],
+      sunrise: DateTime.parse(json['sunrise']),
+      sunset: DateTime.parse(json['sunset']),
+    );
   }
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is DailyTithi &&
-          runtimeType == other.runtimeType &&
-          date == other.date &&
-          tithiName == other.tithiName &&
-          shubhDin == other.shubhDin &&
-          sunrise == other.sunrise &&
-          sunset == other.sunset;
-
-  @override
-  int get hashCode =>
-      date.hashCode ^
-      tithiName.hashCode ^
-      shubhDin.hashCode ^
-      sunrise.hashCode ^
-      sunset.hashCode;
+  Map<String, dynamic> toJson() {
+    return {
+      'date': date.toIso8601String(),
+      'tithiName': tithiName,
+      'sunrise': sunrise.toIso8601String(),
+      'sunset': sunset.toIso8601String(),
+    };
+  }
 }
