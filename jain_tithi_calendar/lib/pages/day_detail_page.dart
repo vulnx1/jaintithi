@@ -1,51 +1,102 @@
 import 'package:flutter/material.dart';
-import '../models/daily_tithi.dart';
-import '../utils/ritual_timings.dart';
+import 'package:geocoding/geocoding.dart' as Geocoding;
+import 'package:geolocator/geolocator.dart';
+// Corrected import
 
-class DayDetailPage extends StatelessWidget {
-  final DateTime date;
-  final DailyTithi tithi;
+class LocationSelector extends StatefulWidget {
+  final Function(String country, String state, double latitude, double longitude) onLocationSelected;
 
-  const DayDetailPage({super.key, required this.date, required this.tithi});
+  const LocationSelector({super.key, required this.onLocationSelected});
+
+  @override
+  State<LocationSelector> createState() => _LocationSelectorState();
+}
+
+class _LocationSelectorState extends State<LocationSelector> {
+  String? _country;
+  String? _state;
+  double? _latitude;
+  double? _longitude;
+  bool _isFetching = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocation();
+  }
+
+  Future<void> _fetchLocation() async {
+    setState(() {
+      _isFetching = true;
+      _error = null;
+    });
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _error = 'Location services are disabled.');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission != LocationPermission.whileInUse && permission != LocationPermission.always) {
+        setState(() => _error = 'Location permission not granted.');
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      final placemarks = await Geocoding.placemarkFromCoordinates(position.latitude, position.longitude); // Corrected line
+
+      if (placemarks.isNotEmpty) {
+        final placemark = placemarks[0];
+        setState(() {
+          _country = placemark.country;
+          _state = placemark.administrativeArea;
+          _latitude = position.latitude;
+          _longitude = position.longitude;
+        });
+        widget.onLocationSelected(_country!, _state!, _latitude!, _longitude!);
+      }
+    } catch (e) {
+      setState(() => _error = 'Failed to get location: $e');
+    } finally {
+      setState(() => _isFetching = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Convert HH:mm strings to DateTime (same day)
-    final sunriseTime = _parseTime(tithi.sunrise, tithi.date);
-    final sunsetTime = _parseTime(tithi.sunset, tithi.date);
-
-    final rituals = calculateRitualTimings(sunriseTime, sunsetTime);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Details for ${_formatDate(tithi.date)}"),
-        backgroundColor: Colors.green,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: ListView(
-          children: [
-            Text("📅 Tithi: ${tithi.tithiName}", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text("☀️ Sunrise: ${tithi.sunrise}"),
-            Text("🌇 Sunset: ${tithi.sunset}"),
-            const Divider(height: 24),
-            Text("🕉️ Ritual Timings", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ...rituals.entries.map((entry) => Padding(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Location: ${_state ?? 'Detecting...'}, ${_country ?? ''}',
+            style: const TextStyle(fontSize: 16),
+          ),
+          if (_isFetching)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 4),
+              child: LinearProgressIndicator(),
+            ),
+          if (_error != null)
+            Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text("${entry.key}: ${entry.value}", style: TextStyle(fontSize: 14)),
-            )),
-          ],
-        ),
+              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+            ),
+          TextButton.icon(
+            onPressed: _fetchLocation,
+            icon: const Icon(Icons.my_location),
+            label: const Text('Refresh Location'),
+          ),
+        ],
       ),
     );
-  }
-
-  DateTime _parseTime(String time, DateTime date) {
-    final parts = time.split(':');
-    return DateTime(date.year, date.month, date.day, int.parse(parts[0]), int.parse(parts[1]));
-  }
-
-  String _formatDate(DateTime dt) {
-    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 }

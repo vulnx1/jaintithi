@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Make sure to import intl package for formatting dates
 import '../models/daily_tithi.dart';
 
 class TithiDayTile extends StatelessWidget {
@@ -12,26 +13,16 @@ class TithiDayTile extends StatelessWidget {
   });
 
   void _showDetails(BuildContext context) {
-    // Fetch sunrise and sunset times
-    final sunriseTime = tithi?.sunrise ?? 'N/A';
-    final sunsetTime = tithi?.sunset ?? 'N/A';
+    // Ensure we are using formatted strings for sunrise and sunset
+    final sunriseTime = _formatTime(tithi?.sunrise);
+    final sunsetTime = _formatTime(tithi?.sunset);
 
-    // Convert to DateTime objects for calculation
-    final sunrise = _parseTime(sunriseTime);
-    final sunset = _parseTime(sunsetTime);
-
-    // Calculate ritual timings based on sunrise and sunset
-    final prahar1 = _calculatePrahar(sunrise, 1); // First Prahar
-    final prahar2 = _calculatePrahar(sunrise, 2); // Second Prahar
-    final prahar3 = _calculatePrahar(sunset, 3); // Third Prahar
-    final prahar4 = _calculatePrahar(sunset, 4); // Fourth Prahar
-
-    // Example for Navkarshi, Porsi, Sadh Porsi, Purimaddha, Avaddha
-    final navkarshi = _calculateNavkarshi(sunrise);
-    final porsi = _calculatePorsi(sunrise);
-    final sadhPorsi = _calculateSadhPorsi(porsi as DateTime);
-    final purimaddha = _calculatePurimaddha(sunset);
-    final avaddha = _calculateAvaddha(sunset);
+    // Example ritual calculations (make sure to use DateTime objects for calculations)
+    final navkarshi = _calculateNavkarshi(tithi?.sunrise ?? DateTime.now());
+    final porsi = _calculatePorsi(tithi?.sunrise ?? DateTime.now());
+    final sadhPorsi = _calculateSadhPorsi(tithi?.sunrise ?? DateTime.now());
+    final purimaddha = _calculatePurimaddha(tithi?.sunset ?? DateTime.now());
+    final avaddha = _calculateAvaddha(tithi?.sunset ?? DateTime.now());
 
     showDialog(
       context: context,
@@ -45,10 +36,6 @@ class TithiDayTile extends StatelessWidget {
                 Text('Sunrise: $sunriseTime'),
                 Text('Sunset: $sunsetTime'),
                 const SizedBox(height: 10),
-                Text('Prahar 1: $prahar1'),
-                Text('Prahar 2: $prahar2'),
-                Text('Prahar 3: $prahar3'),
-                Text('Prahar 4: $prahar4'),
                 Text('Navkarshi: $navkarshi'),
                 Text('Porsi: $porsi'),
                 Text('Sadh Porsi: $sadhPorsi'),
@@ -68,45 +55,36 @@ class TithiDayTile extends StatelessWidget {
     );
   }
 
-  DateTime _parseTime(String time) {
-    final parts = time.split(':');
-    return DateTime.utc(2000, 1, 1, int.parse(parts[0]), int.parse(parts[1]));
+  // Utility to format the time as HH:mm
+  String _formatTime(DateTime? time) {
+    if (time == null) return 'N/A'; // Return 'N/A' if time is null
+    return DateFormat('HH:mm').format(time); // Format DateTime to 'HH:mm' format
   }
 
-  String _calculatePrahar(DateTime time, int praharNumber) {
-    // Example: First Prahar = 6 AM to 9 AM
-    int praharHour = time.hour + ((praharNumber - 1) * 3); // Adjust based on prahar number
-    return "${praharHour.toString().padLeft(2, '0')}:00 - ${(praharHour + 3).toString().padLeft(2, '0')}:00";
-  }
-
+  // Ritual time calculations (using DateTime objects for accuracy)
   String _calculateNavkarshi(DateTime sunrise) {
-    // Fixed time, for example at sunrise + 1 hour
-    final navkarshiTime = sunrise.add(const Duration(hours: 1));
-    return "${navkarshiTime.hour.toString().padLeft(2, '0')}:${navkarshiTime.minute.toString().padLeft(2, '0')}";
+    final navkarshiTime = sunrise.add(const Duration(minutes: 48));
+    return _formatTime(navkarshiTime);
   }
 
   String _calculatePorsi(DateTime sunrise) {
-    // Fixed time after sunrise, let's assume 6 hours later
     final porsiTime = sunrise.add(const Duration(hours: 6));
-    return "${porsiTime.hour.toString().padLeft(2, '0')}:${porsiTime.minute.toString().padLeft(2, '0')}";
+    return _formatTime(porsiTime);
   }
 
-  String _calculateSadhPorsi(DateTime porsi) {
-    // Fixed time after Porsi, let's assume 4 hours later
-    final sadhPorsiTime = porsi.add(const Duration(hours: 4));
-    return "${sadhPorsiTime.hour.toString().padLeft(2, '0')}:${sadhPorsiTime.minute.toString().padLeft(2, '0')}";
+  String _calculateSadhPorsi(DateTime sunrise) {
+    final sadhPorsiTime = sunrise.add(const Duration(hours: 7));
+    return _formatTime(sadhPorsiTime);
   }
 
   String _calculatePurimaddha(DateTime sunset) {
-    // Fixed time after sunset, let's assume 1 hour later
     final purimaddhaTime = sunset.add(const Duration(hours: 1));
-    return "${purimaddhaTime.hour.toString().padLeft(2, '0')}:${purimaddhaTime.minute.toString().padLeft(2, '0')}";
+    return _formatTime(purimaddhaTime);
   }
 
   String _calculateAvaddha(DateTime sunset) {
-    // Fixed time after sunset, let's assume 2 hours later
     final avaddhaTime = sunset.add(const Duration(hours: 2));
-    return "${avaddhaTime.hour.toString().padLeft(2, '0')}:${avaddhaTime.minute.toString().padLeft(2, '0')}";
+    return _formatTime(avaddhaTime);
   }
 
   @override
@@ -140,11 +118,11 @@ class TithiDayTile extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Sunrise: ${tithi?.sunrise ?? 'N/A'}',
+                'Sunrise: ${_formatTime(tithi?.sunrise)}',
                 style: const TextStyle(fontSize: 12),
               ),
               Text(
-                'Sunset: ${tithi?.sunset ?? 'N/A'}',
+                'Sunset: ${_formatTime(tithi?.sunset)}',
                 style: const TextStyle(fontSize: 12),
               ),
             ],

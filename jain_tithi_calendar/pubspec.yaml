@@ -30,7 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  table_calendar: ^3.0.9       # For calendar grid
+  table_calendar: ^3.0.9
+  geocoding: ^2.0.0
+       # For calendar grid
   geolocator: ^10.0.0          # For GPS location
   intl: ^0.18.1                # Date formatting
   flutter_screenutil: ^5.8.4   # Responsive layout
